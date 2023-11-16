@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chat Roulette</title>
+  <script src="https://cdn.socket.io/4.1.3/socket.io.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Chat Roulette</h1>
+
+    <div id="messages"></div>
+
+    <input type="text" id="usernameInput" placeholder="Enter your username">
+    <button id="setUsernameButton">Set Username</button>
+
+    <input type="text" id="messageInput" placeholder="Enter your message" disabled>
+    <button id="sendButton" disabled>Send</button>
+
+    <div id="waitingMessage">Waiting for a partner...</div>
+
+    <script>
+      const socket = io('http://localhost:5500'); // Update the port number
+
+      let username;
+
+      document.getElementById('setUsernameButton').addEventListener('click', () => {
+        username = document.getElementById('usernameInput').value;
+        document.getElementById('usernameInput').value = '';
+
+        if (username) {
+          socket.emit('setUserName', { name: username });
+
+          document.getElementById('setUsernameButton').style.display = 'none';
+          document.getElementById('messageInput').disabled = false;
+          document.getElementById('sendButton').disabled = false;
+        }
+      });
+
+      socket.on('connect', () => {
+        console.log('Connected to server');
+      });
+
+      socket.on('waitingForPartner', () => {
+        document.getElementById('waitingMessage').style.display = 'block';
+      });
+
+      socket.on('partnerConnected', (data) => {
+        document.getElementById('waitingMessage').style.display = 'none';
+        console.log('Partner connected:', data.id);
+      });
+
+      socket.on('connectionEstablished', (data) => {
+        console.log('Connection established:', data.message);
+      });
+
+      socket.on('message', (data) => {
+        const message = `<div class="message">${data.username}: ${data.message}</div>`; // Use the correct CSS selector
+        document.getElementById('messages').innerHTML += message;
+      });
+
+      socket.on('partnerDisconnected', (data) => {
+        console.log('Partner disconnected:', data.id);
+        document.getElementById('messages').innerHTML = '';
+        document.getElementById('waitingMessage').style.display = 'block';
+
+        document.getElementById('messageInput').disabled = true;
+        document.getElementById('sendButton').disabled = true;
+      });
+
+      document.getElementById('sendButton').addEventListener('click', () => {
+        const message = document.getElementById('messageInput').value;
+        socket.emit('message', message);
+        document.getElementById('messageInput').value = '';
+      });
+    </script>
+  </div>
+</body>
+</html>
